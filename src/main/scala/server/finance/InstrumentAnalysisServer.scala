@@ -69,15 +69,15 @@ class InstrumentAnalysisServerHelper(dataStorageServer: => ActorRef) {
    * TODO: Ignores the instruments criteria. Fix!
    */
   protected def fetchPrices(
-        instruments: List[Instrument], statistics: List[InstrumentStatistic], 
-        start: DateTime, end: DateTime): JValue = {
+		instruments: List[Instrument], statistics: List[InstrumentStatistic], 
+		start: DateTime, end: DateTime): JValue = {
     val startMillis = start.getMillis
     val endMillis   = end.getMillis
     (dataStorageServer !! Get(("start" -> startMillis) ~ ("end" -> endMillis))) match {
       case None => 
         Pair("warning", "Nothing returned for query (start, end) = (" + start + ", " + end + ")")
       case Some(result) => 
-        formatPriceResults(filter(result), instruments, statistics, startMillis, endMillis)
+        formatPriceResults(filter(result, instruments), instruments, statistics, startMillis, endMillis)
     }
   }
   
@@ -85,7 +85,26 @@ class InstrumentAnalysisServerHelper(dataStorageServer: => ActorRef) {
    * A "hook" method that could be used to filter by instrument (and maybe statistics) criteria. 
    * However, in general, it would be better to filter in the DB query itself!
    */
-  protected def filter(json: JValue): JValue = json
+  protected def filter(json: JValue, instruments: List[Instrument]): JValue = {  
+	val names = Instrument.toSymbolNames(instruments)
+	// log.error ("json: "+json.toString)
+	// log.error ("json.values: "+json.values.toString)
+	// log.error ("symbol: "+(json \\ "symbol").toString)
+	json match {
+		case JArray(list) => list filter { element =>
+			(element \\ "symbol") match {
+				case JField("symbol", x) if (names.exists(x == JString(_))) => true
+				case _ => false
+			}
+		}
+		case _ => true
+	}
+  }
+  
+  
+  
+  
+  
   
   // Public visibility, for testing purposes.
   def formatPriceResults(
