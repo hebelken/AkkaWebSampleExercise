@@ -60,11 +60,15 @@ class RestfulDataPublisher extends Logging {
 
       case "list_instruments" =>
         log.debug("Requesting a list of all instruments")
-        getAllInstruments()
+        getAllInstruments(instruments)
 
       case "stats" =>
         log.debug("Requesting statistics for instruments, stats, start, end = "+instruments+", "+stats+", "+start+", "+end)
         getAllDataFor(instruments, stats, start, end)
+		
+	  case "list_stocks" =>
+	    log.debug("Requesting list of stocks")
+		getAllInstruments(instruments)
         
       case x => """{"error": "Unrecognized 'action': """ + action + "\"}"
     }
@@ -91,10 +95,20 @@ class RestfulDataPublisher extends Logging {
           th, instruments, stats, start, end)
     }
     
-  protected[rest] def getAllInstruments() = 
+  protected[rest] def getAllInstruments(instruments: String) = 
     try {
-      val results = getStatsFromInstrumentAnalysisServerSupervisors(GetInstrumentList('A' to 'Z'))
-      val result = compact(render(JSONMap.toJValue(Map("instrument-list" -> results))))
+	  // Hack! Just grab the first and last letters in the "instruments" string
+	  // and use them as the range, but handle the case of 0 or 1 characters.
+	  val symbolRange = instruments.trim match {
+	    case "" => 'A' to 'Z'  // default
+		case s  => s.length match {
+		case 1 => 'A' to s.charAt(0).toUpper  // 1 character; use as end
+		case n => s.charAt(0).toUpper to s.charAt(n-1).toUpper
+	    }
+	  }
+	  val results = getStatsFromInstrumentAnalysisServerSupervisors(GetInstrumentList(symbolRange))
+	  val result = compact(render(JSONMap.toJValue(Map("instrument-list" -> results))))
+
       log.info("instrument list result = "+result.substring(0,100)+"...")
       result
     } catch {

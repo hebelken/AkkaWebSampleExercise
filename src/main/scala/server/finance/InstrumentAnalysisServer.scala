@@ -105,6 +105,17 @@ class InstrumentAnalysisServerHelper(dataStorageServer: => ActorRef) {
     fullResults
   }
   
+   def formatInstrumentResults(results: JValue, range: scala.collection.immutable.NumericRange[Char]): JValue = {
+      val results2 = results match {
+      case JNothing => toJValue(Nil)  // Use an empty array as the result
+      case x => x
+    }
+    val fullResults = toJValue(Map("range" -> range.toString, "results" -> results2))
+    fullResults
+  }
+  
+  
+  
   /** Extract and format the data so it's more convenient when returned to the UI. */
   protected def toNiceFormat(instruments: List[Instrument], statistics: List[InstrumentStatistic], start: DateTime, end: DateTime): Map[String, Any] = 
     Map(
