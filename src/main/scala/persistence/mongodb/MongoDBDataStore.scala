@@ -53,11 +53,21 @@ class MongoDBDataStore(
     case Some(dbo) => Some(JSONRecord(dbo.toMap))
   }
   
-  def range(from: DateTime, to: DateTime, maxNum: Int): Iterable[JSONRecord] = try {
+  def range(from: DateTime, to: DateTime, otherCriteria: Map[String,Any], maxNum: Int): Iterable[JSONRecord] = try {
     val qb = new com.mongodb.QueryBuilder
     qb.and(JSONRecord.timestampKey).
       greaterThanEquals(dateTimeToAnyValue(from)).
       lessThanEquals(dateTimeToAnyValue(to))
+	
+	if(otherCriteria.keySet.head.equals("stock_symbol")){
+		val symbolList = new com.mongodb.BasicDBList()
+		//otherCriteria.foreach {case k->v =>  symbolList.put(k,v)} 
+		for ((value) <- otherCriteria) symbolList.add(value)
+		qb.and(otherCriteria.keySet.head)
+	}
+	
+	
+	
     val query = qb.get
     val cursor = collection.find(query).sort(new BasicDBObject(JSONRecord.timestampKey, 1))
     log.info("db name: query, cursor.count, maxNum: "+collection.getFullName+", "+query+", "+cursor.count+", "+maxNum)
